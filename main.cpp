@@ -72,7 +72,7 @@ void playBackgroundMusic(const char* fileName) {
 }
 
 void stopBackgroundMusic() {
-    PlaySound(NULL, 0, 0); // Stop all sounds including background music
+    PlaySound(NULL, 0, 0);
 }
 
 bool isMouseInside(float mouseX, float mouseY, float btnX, float btnY, float btnWidth, float btnHeight) {
@@ -99,7 +99,6 @@ void resetBlock() {
     blockVisible = true;
 }
 
-// Load texture from "texture.png" and create OpenGL texture
 bool loadBackgroundTexture() {
     int width, height, channels;
     unsigned char* data = stbi_load("texture.png", &width, &height, &channels, 0);
@@ -111,15 +110,12 @@ bool loadBackgroundTexture() {
     glGenTextures(1, &bgTextureID);
     glBindTexture(GL_TEXTURE_2D, bgTextureID);
 
-    // Set texture parameters (repeat + linear filtering)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    // Detect format
     GLenum format = (channels == 4) ? GL_RGBA : GL_RGB;
-
     glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
     glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -127,7 +123,6 @@ bool loadBackgroundTexture() {
     return true;
 }
 
-// Draw fullscreen textured quad for background
 void drawBackground() {
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, bgTextureID);
@@ -147,6 +142,20 @@ void drawBackground() {
     glDisable(GL_TEXTURE_2D);
 }
 
+void renderHUD() {
+    char scoreText[64];
+    sprintf(scoreText, "Score: %d", score);
+    renderText(10, 570, scoreText, 1.5f);
+
+    char missedText[64];
+    sprintf(missedText, "Missed: %d / 5", missedBlocks);
+    renderText(10, 540, missedText, 1.5f);
+
+    char targetText[64];
+    sprintf(targetText, "Target: %d", targetScore);
+    renderText(10, 510, targetText, 1.5f);
+}
+
 int main() {
     if (!glfwInit()) return -1;
 
@@ -157,7 +166,6 @@ int main() {
     }
     glfwMakeContextCurrent(window);
 
-    // Enable textures
     glEnable(GL_TEXTURE_2D);
 
     glMatrixMode(GL_PROJECTION);
@@ -200,13 +208,9 @@ int main() {
                 if (isMouseInside(mouseX, mouseY, startX, startY, startWidth, startHeight)) {
                     showStartScreen = false;
                     gameStarted = true;
-
-                    // Start background music here
-                    playBackgroundMusic("D:\\CodeBlocks\\CB\\OpenGLTest\\sounds\\background.wav");
-
-                    while (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+                    playBackgroundMusic("sounds/background.wav");
+                    while (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
                         glfwPollEvents();
-                    }
                 }
                 else if (isMouseInside(mouseX, mouseY, quitX, quitY, quitWidth, quitHeight)) {
                     glfwSetWindowShouldClose(window, GLFW_TRUE);
@@ -218,7 +222,21 @@ int main() {
             continue;
         }
 
-        if (!gameStarted) {
+        if (showGameOverScreen) {
+            glClearColor(0, 0, 0.2f, 1);
+            glClear(GL_COLOR_BUFFER_BIT);
+            glLoadIdentity();
+            renderText(200, 300, "GAME OVER - Press R to Restart", 2.0f);
+            if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
+                score = 0;
+                missedBlocks = 0;
+                level = 1;
+                blockSpeed = 0.003f;
+                targetScore = 20;
+                showGameOverScreen = false;
+                resetBlock();
+            }
+            glfwSwapBuffers(window);
             glfwPollEvents();
             continue;
         }
@@ -237,7 +255,7 @@ int main() {
                 score = 0;
                 missedBlocks = 0;
                 targetScore = 20 + 10 * (level - 1);
-                blockSpeed += 0.001f;  // Increase difficulty
+                blockSpeed += 0.001f;
                 resetBlock();
                 showLevelCompleteScreen = false;
             }
@@ -260,61 +278,35 @@ int main() {
             continue;
         }
 
-        // Paddle movement
-        if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-            playerX -= 1.5f * dt;
-        if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-            playerX += 1.5f * dt;
+        if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) playerX -= 1.5f * dt;
+        if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) playerX += 1.5f * dt;
 
-        if (playerX - paddleWidth < -1.0f)
-            playerX = -1.0f + paddleWidth;
-        if (playerX + paddleWidth > 1.0f)
-            playerX = 1.0f - paddleWidth;
+        if (playerX - paddleWidth < -1.0f) playerX = -1.0f + paddleWidth;
+        if (playerX + paddleWidth > 1.0f) playerX = 1.0f - paddleWidth;
 
-        if (blockVisible) {
-            blockY -= blockSpeed;
-        }
+        if (blockVisible) blockY -= blockSpeed;
 
         if (blockY < -0.9f + paddleHeight && blockVisible) {
             if (std::abs(blockX - playerX) < paddleWidth) {
                 score++;
-                playSound("D:\\CodeBlocks\\CB\\OpenGLTest\\sounds\\catch.wav");
-                blockVisible = false;
-                resetBlock();
-            }
-            else if (blockY < -1.0f) {
+                playSound("sounds/catch.wav");
+            } else {
                 missedBlocks++;
-                playSound("D:\\CodeBlocks\\CB\\OpenGLTest\\sounds\\miss.wav");
-                blockVisible = false;
-                resetBlock();
+                playSound("sounds/miss.wav");
             }
+            blockVisible = false;
+            if (score >= targetScore) showLevelCompleteScreen = true;
+            if (missedBlocks >= 5) showGameOverScreen = true;
         }
 
-        if (missedBlocks >= 3) {
-            showGameOverScreen = true;
-            stopBackgroundMusic();
-        }
+        if (!blockVisible) resetBlock();
 
-        if (score >= targetScore) {
-            showLevelCompleteScreen = true;
-            stopBackgroundMusic();
-        }
-
+        glClearColor(0, 0, 0, 1);
         glClear(GL_COLOR_BUFFER_BIT);
-
         drawBackground();
 
-        // Draw paddle shadow
-        glColor3f(0, 0, 0);
-        glBegin(GL_QUADS);
-        glVertex2f(playerX - paddleWidth + 0.02f, -0.95f - 0.03f);
-        glVertex2f(playerX + paddleWidth + 0.02f, -0.95f - 0.03f);
-        glVertex2f(playerX + paddleWidth - 0.02f, -0.95f + 0.01f);
-        glVertex2f(playerX - paddleWidth - 0.02f, -0.95f + 0.01f);
-        glEnd();
-
-        // Draw paddle
-        glColor3f(1, 1, 1);
+        glLoadIdentity();
+        glColor3f(0, 1, 1);
         glBegin(GL_QUADS);
         glVertex2f(playerX - paddleWidth, -0.95f);
         glVertex2f(playerX + paddleWidth, -0.95f);
@@ -323,16 +315,6 @@ int main() {
         glEnd();
 
         if (blockVisible) {
-            // Draw block shadow
-            glColor3f(0, 0, 0);
-            glBegin(GL_QUADS);
-            glVertex2f(blockX - 0.05f + 0.02f, blockY - 0.05f - 0.02f);
-            glVertex2f(blockX + 0.05f + 0.02f, blockY - 0.05f - 0.02f);
-            glVertex2f(blockX + 0.05f + 0.02f, blockY + 0.05f - 0.02f);
-            glVertex2f(blockX - 0.05f + 0.02f, blockY + 0.05f - 0.02f);
-            glEnd();
-
-            // Draw block
             glColor3f(1, 0, 0);
             glBegin(GL_QUADS);
             glVertex2f(blockX - 0.05f, blockY - 0.05f);
@@ -342,36 +324,7 @@ int main() {
             glEnd();
         }
 
-        // Draw score and level text
-        char scoreText[32];
-        sprintf(scoreText, "Score: %d  Level: %d  Missed: %d", score, level, missedBlocks);
-        renderText(10, windowHeight - 30, scoreText, 1.5f);
-
-        if (showGameOverScreen) {
-            glClearColor(0.1f, 0, 0, 1);
-            glClear(GL_COLOR_BUFFER_BIT);
-            glLoadIdentity();
-            char msg[64];
-            sprintf(msg, "Game Over! Your score: %d. Press R to Restart or ESC to Quit.", score);
-            renderText(100, 300, msg, 2.0f);
-
-            if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
-                score = 0;
-                level = 1;
-                missedBlocks = 0;
-                blockSpeed = 0.003f;
-                resetBlock();
-                showGameOverScreen = false;
-                playBackgroundMusic("D:\\CodeBlocks\\CB\\OpenGLTest\\sounds\\background.wav");
-            }
-            else if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-                break;
-            }
-
-            glfwSwapBuffers(window);
-            glfwPollEvents();
-            continue;
-        }
+        renderHUD();
 
         glfwSwapBuffers(window);
         glfwPollEvents();

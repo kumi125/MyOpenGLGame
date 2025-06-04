@@ -15,10 +15,12 @@
 					<Add option="-g" />
 				</Compiler>
 				<Linker>
+					<Add option="-mconsole" />
 					<Add library="winmm" />
 					<Add library="glfw3" />
 					<Add library="opengl32" />
 					<Add library="gdi32" />
+					<Add library="glew32" />
 				</Linker>
 			</Target>
 			<Target title="Release">
@@ -31,19 +33,30 @@
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
+					<Add option="-mconsole" />
+					<Add library="glew32" />
 				</Linker>
 			</Target>
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
 			<Add directory="../../GLFW/glfw-3.4.bin.WIN64/include" />
+			<Add directory="D:/CodeBlocks/MinGW/include" />
+			<Add directory="D:/CodeBlocks/CB/OpenGLTest/include" />
 		</Compiler>
 		<Linker>
+			<Add option="-mconsole" />
+			<Add option="-Wl,--subsystem,console" />
 			<Add library="glfw3" />
 			<Add library="opengl32" />
 			<Add library="gdi32" />
 			<Add library="winmm" />
+			<Add library="glew32" />
+			<Add library="SDL2" />
+			<Add library="SDL2_mixer" />
 			<Add directory="../../GLFW/glfw-3.4.bin.WIN64/lib-mingw-w64" />
+			<Add directory="D:/CodeBlocks/MinGW/lib" />
+			<Add directory="D:/CodeBlocks/CB/OpenGLTest/lib" />
 		</Linker>
 		<Unit filename="main.cpp" />
 		<Extensions>
