@@ -43,6 +43,7 @@
 			<Add directory="../../GLFW/glfw-3.4.bin.WIN64/include" />
 			<Add directory="D:/CodeBlocks/MinGW/include" />
 			<Add directory="D:/CodeBlocks/CB/OpenGLTest/include" />
+			<Add directory="D:/CodeBlocks/CB/OpenGLTest/OpenSSL-master/MinGW/include" />
 		</Compiler>
 		<Linker>
 			<Add option="-mconsole" />
@@ -54,9 +55,14 @@
 			<Add library="glew32" />
 			<Add library="SDL2" />
 			<Add library="SDL2_mixer" />
+			<Add library="ssl" />
+			<Add library="crypto" />
+			<Add library="ws2_32" />
+			<Add library="crypt32" />
 			<Add directory="../../GLFW/glfw-3.4.bin.WIN64/lib-mingw-w64" />
 			<Add directory="D:/CodeBlocks/MinGW/lib" />
 			<Add directory="D:/CodeBlocks/CB/OpenGLTest/lib" />
+			<Add directory="D:/CodeBlocks/CB/OpenGLTest/OpenSSL-master/MinGW/lib64" />
 		</Linker>
 		<Unit filename="main.cpp" />
 		<Extensions>

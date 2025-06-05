@@ -1,12 +1,15 @@
+// [No changes at the top]
 #include <GLFW/glfw3.h>
 #include <windows.h>
 #include <iostream>
 #include <cstdlib>
 #include <cmath>
+#include <string>
 #include "stb_easy_font.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+// [Variables]
 float playerX = 0.0f;
 float paddleWidth = 0.2f;
 float paddleHeight = 0.05f;
@@ -26,6 +29,25 @@ bool showStartScreen = true;
 bool gameStarted = false;
 
 GLuint bgTextureID = 0;
+
+// [Login]
+bool login() {
+    std::string username;
+    std::string password;
+
+    std::cout << "Username: ";
+    std::getline(std::cin, username);
+    std::cout << "Password: ";
+    std::getline(std::cin, password);
+
+    if (username == "admin" && password == "1234") {
+        std::cout << "Login successful! Welcome, admin!\n";
+        return true;
+    } else {
+        std::cout << "Login failed. Exiting...\n";
+        return false;
+    }
+}
 
 float getDeltaTime() {
     static double lastTime = glfwGetTime();
@@ -66,11 +88,9 @@ void renderText(float x, float y, const char* text, float scale = 1.0f) {
 void playSound(const char* fileName) {
     PlaySound(fileName, NULL, SND_FILENAME | SND_ASYNC);
 }
-
 void playBackgroundMusic(const char* fileName) {
     PlaySound(fileName, NULL, SND_FILENAME | SND_ASYNC | SND_LOOP);
 }
-
 void stopBackgroundMusic() {
     PlaySound(NULL, 0, 0);
 }
@@ -109,7 +129,6 @@ bool loadBackgroundTexture() {
 
     glGenTextures(1, &bgTextureID);
     glBindTexture(GL_TEXTURE_2D, bgTextureID);
-
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -118,7 +137,6 @@ bool loadBackgroundTexture() {
     GLenum format = (channels == 4) ? GL_RGBA : GL_RGB;
     glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
     glBindTexture(GL_TEXTURE_2D, 0);
-
     stbi_image_free(data);
     return true;
 }
@@ -126,11 +144,10 @@ bool loadBackgroundTexture() {
 void drawBackground() {
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, bgTextureID);
-
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-
     glColor3f(1, 1, 1);
+
     glBegin(GL_QUADS);
     glTexCoord2f(0, 0); glVertex2f(-1, -1);
     glTexCoord2f(1, 0); glVertex2f(1, -1);
@@ -157,17 +174,14 @@ void renderHUD() {
 }
 
 int main() {
+    if (!login()) return -1;
     if (!glfwInit()) return -1;
 
     GLFWwindow* window = glfwCreateWindow(800, 600, "Paddle Game with Shadow", NULL, NULL);
-    if (!window) {
-        glfwTerminate();
-        return -1;
-    }
+    if (!window) { glfwTerminate(); return -1; }
     glfwMakeContextCurrent(window);
 
     glEnable(GL_TEXTURE_2D);
-
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glOrtho(-1, 1, -1, 1, -1, 1);
@@ -181,28 +195,18 @@ int main() {
 
     while (!glfwWindowShouldClose(window)) {
         float dt = getDeltaTime();
-
         int windowWidth, windowHeight;
         glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
-
         double mouseX_d, mouseY_d;
         glfwGetCursorPos(window, &mouseX_d, &mouseY_d);
-
         float mouseX = static_cast<float>(mouseX_d);
         float mouseY = static_cast<float>(windowHeight - mouseY_d);
 
         if (showStartScreen) {
             renderStartScreen(windowWidth, windowHeight);
-
-            float startX = windowWidth * 0.4f;
-            float startY = windowHeight * 0.6f;
-            float startWidth = windowWidth * 0.2f;
-            float startHeight = windowHeight * 0.1f;
-
-            float quitX = windowWidth * 0.4f;
-            float quitY = windowHeight * 0.4f;
-            float quitWidth = windowWidth * 0.2f;
-            float quitHeight = windowHeight * 0.1f;
+            float startX = windowWidth * 0.4f, startY = windowHeight * 0.6f;
+            float startWidth = windowWidth * 0.2f, startHeight = windowHeight * 0.1f;
+            float quitX = windowWidth * 0.4f, quitY = windowHeight * 0.4f;
 
             if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
                 if (isMouseInside(mouseX, mouseY, startX, startY, startWidth, startHeight)) {
@@ -211,126 +215,120 @@ int main() {
                     playBackgroundMusic("sounds/background.wav");
                     while (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
                         glfwPollEvents();
+                } else if (isMouseInside(mouseX, mouseY, quitX, quitY, startWidth, startHeight)) {
+                    break;
                 }
-                else if (isMouseInside(mouseX, mouseY, quitX, quitY, quitWidth, quitHeight)) {
-                    glfwSetWindowShouldClose(window, GLFW_TRUE);
+            }
+
+            glfwSwapBuffers(window);
+            glfwPollEvents();
+            continue;
+        }
+
+        if (!gameStarted) {
+            glfwSwapBuffers(window);
+            glfwPollEvents();
+            continue;
+        }
+
+        // Pause/resume input
+        if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS && !isPaused) {
+            isPaused = true;
+            playSound("sounds/pause.wav");
+            while (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
+                glfwPollEvents();
+        }
+        if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS && isPaused) {
+            isPaused = false;
+            playSound("sounds/resume.wav");
+            while (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS)
+                glfwPollEvents();
+        }
+
+        if (!showGameOverScreen && !showLevelCompleteScreen && !isPaused) {
+            playerX = (mouseX / windowWidth) * 2 - 1;
+            playerX = std::fmax(playerX, -1 + paddleWidth / 2);
+            playerX = std::fmin(playerX, 1 - paddleWidth / 2);
+
+            blockY -= blockSpeed;
+
+            if (blockVisible && blockY < -1 + paddleHeight + 0.05f) {
+                if (blockX > playerX - paddleWidth / 2 && blockX < playerX + paddleWidth / 2) {
+                    score++;
+                    playSound("sounds/catch.wav");
+                    blockVisible = false;
+                    if (score >= targetScore) {
+                        showLevelCompleteScreen = true;
+                        playSound("sounds/level_complete.wav");
+                    }
+                } else if (blockY < -1) {
+                    missedBlocks++;
+                    playSound("sounds/miss.wav");
+                    blockVisible = false;
+                    if (missedBlocks >= 5) {
+                        showGameOverScreen = true;
+                        playSound("sounds/game_over.wav");
+                        stopBackgroundMusic();
+                    }
                 }
             }
 
-            glfwSwapBuffers(window);
-            glfwPollEvents();
-            continue;
+            if (!blockVisible) resetBlock();
         }
 
-        if (showGameOverScreen) {
-            glClearColor(0, 0, 0.2f, 1);
-            glClear(GL_COLOR_BUFFER_BIT);
-            glLoadIdentity();
-            renderText(200, 300, "GAME OVER - Press R to Restart", 2.0f);
-            if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
-                score = 0;
-                missedBlocks = 0;
-                level = 1;
-                blockSpeed = 0.003f;
-                targetScore = 20;
-                showGameOverScreen = false;
-                resetBlock();
-            }
-            glfwSwapBuffers(window);
-            glfwPollEvents();
-            continue;
-        }
-
-        if (showLevelCompleteScreen) {
-            glClearColor(0, 0, 0.2f, 1);
-            glClear(GL_COLOR_BUFFER_BIT);
-            glLoadIdentity();
-
-            char msg[64];
-            sprintf(msg, "Level %d Complete! Press SPACE to continue.", level);
-            renderText(100, 300, msg, 2.0f);
-
-            if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-                level++;
-                score = 0;
-                missedBlocks = 0;
-                targetScore = 20 + 10 * (level - 1);
-                blockSpeed += 0.001f;
-                resetBlock();
-                showLevelCompleteScreen = false;
-            }
-
-            glfwSwapBuffers(window);
-            glfwPollEvents();
-            continue;
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) isPaused = true;
-        if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS) isPaused = false;
-
-        if (isPaused) {
-            glClearColor(0, 0, 0.1f, 1);
-            glClear(GL_COLOR_BUFFER_BIT);
-            glLoadIdentity();
-            renderText(320, 300, "GAME PAUSED - Press 'O' to Resume", 2.0f);
-            glfwSwapBuffers(window);
-            glfwPollEvents();
-            continue;
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) playerX -= 1.5f * dt;
-        if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) playerX += 1.5f * dt;
-
-        if (playerX - paddleWidth < -1.0f) playerX = -1.0f + paddleWidth;
-        if (playerX + paddleWidth > 1.0f) playerX = 1.0f - paddleWidth;
-
-        if (blockVisible) blockY -= blockSpeed;
-
-        if (blockY < -0.9f + paddleHeight && blockVisible) {
-            if (std::abs(blockX - playerX) < paddleWidth) {
-                score++;
-                playSound("sounds/catch.wav");
-            } else {
-                missedBlocks++;
-                playSound("sounds/miss.wav");
-            }
-            blockVisible = false;
-            if (score >= targetScore) showLevelCompleteScreen = true;
-            if (missedBlocks >= 5) showGameOverScreen = true;
-        }
-
-        if (!blockVisible) resetBlock();
-
-        glClearColor(0, 0, 0, 1);
         glClear(GL_COLOR_BUFFER_BIT);
         drawBackground();
 
-        glLoadIdentity();
-        glColor3f(0, 1, 1);
-        glBegin(GL_QUADS);
-        glVertex2f(playerX - paddleWidth, -0.95f);
-        glVertex2f(playerX + paddleWidth, -0.95f);
-        glVertex2f(playerX + paddleWidth, -0.95f + paddleHeight);
-        glVertex2f(playerX - paddleWidth, -0.95f + paddleHeight);
-        glEnd();
-
-        if (blockVisible) {
-            glColor3f(1, 0, 0);
+        if (showGameOverScreen) {
+            renderText(windowWidth * 0.3f, windowHeight * 0.5f, "GAME OVER", 5.0f);
+            renderText(windowWidth * 0.25f, windowHeight * 0.4f, "Press ESC to Exit", 2.0f);
+        } else if (showLevelCompleteScreen) {
+            renderText(windowWidth * 0.25f, windowHeight * 0.5f, "LEVEL COMPLETE!", 5.0f);
+            renderText(windowWidth * 0.25f, windowHeight * 0.4f, "Press N for Next Level", 2.0f);
+        } else {
+            glColor3f(0.0f, 0.8f, 0.1f);
             glBegin(GL_QUADS);
-            glVertex2f(blockX - 0.05f, blockY - 0.05f);
-            glVertex2f(blockX + 0.05f, blockY - 0.05f);
-            glVertex2f(blockX + 0.05f, blockY + 0.05f);
-            glVertex2f(blockX - 0.05f, blockY + 0.05f);
+            glVertex2f(playerX - paddleWidth / 2, -1 + paddleHeight);
+            glVertex2f(playerX + paddleWidth / 2, -1 + paddleHeight);
+            glVertex2f(playerX + paddleWidth / 2, -1);
+            glVertex2f(playerX - paddleWidth / 2, -1);
             glEnd();
-        }
 
-        renderHUD();
+            if (blockVisible) {
+                glColor3f(0.9f, 0.1f, 0.1f);
+                glBegin(GL_QUADS);
+                glVertex2f(blockX - 0.05f, blockY);
+                glVertex2f(blockX + 0.05f, blockY);
+                glVertex2f(blockX + 0.05f, blockY - 0.05f);
+                glVertex2f(blockX - 0.05f, blockY - 0.05f);
+                glEnd();
+            }
+
+            renderHUD();
+        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
+
+        if (showLevelCompleteScreen && glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS) {
+            level++;
+            targetScore += 10;
+            score = 0;
+            missedBlocks = 0;
+            showLevelCompleteScreen = false;
+            resetBlock();
+            playBackgroundMusic("sounds/background.wav");
+            while (glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS)
+                glfwPollEvents();
+        }
+
+        if (showGameOverScreen && glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+            break;
+        }
     }
 
     stopBackgroundMusic();
+    glfwDestroyWindow(window);
     glfwTerminate();
     return 0;
 }
