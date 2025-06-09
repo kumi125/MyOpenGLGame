@@ -171,6 +171,11 @@ void renderHUD() {
     char targetText[64];
     sprintf(targetText, "Target: %d", targetScore);
     renderText(10, 510, targetText, 1.5f);
+
+    // ✅ Show Level
+    char levelText[64];
+    sprintf(levelText, "Level: %d", level);
+    renderText(10, 480, levelText, 1.5f);
 }
 
 int main() {
@@ -231,7 +236,6 @@ int main() {
             continue;
         }
 
-        // Pause/resume input
         if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS && !isPaused) {
             isPaused = true;
             playSound("sounds/pause.wav");
@@ -258,9 +262,29 @@ int main() {
                     playSound("sounds/catch.wav");
                     blockVisible = false;
                     if (score >= targetScore) {
-                        showLevelCompleteScreen = true;
-                        playSound("sounds/level_complete.wav");
-                    }
+    showLevelCompleteScreen = true;
+    playSound("sounds/level_complete.wav");
+    level++;
+    score = 0;
+    missedBlocks = 0;
+    targetScore += 5;
+    blockSpeed += 0.0003f;  // Slight speed increase
+    resetBlock();
+
+    // Short pause to show level complete sound/message
+    double showTime = glfwGetTime();
+    while (glfwGetTime() - showTime < 2.0) {
+        glClearColor(0, 0, 0.1f, 1);
+        glClear(GL_COLOR_BUFFER_BIT);
+        renderText(250, 300, "Level Complete!", 2.5f);
+        renderText(230, 250, "Get Ready for Next Level", 1.5f);
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
+
+    showLevelCompleteScreen = false;
+}
+
                 } else if (blockY < -1) {
                     missedBlocks++;
                     playSound("sounds/miss.wav");
@@ -268,7 +292,6 @@ int main() {
                     if (missedBlocks >= 5) {
                         showGameOverScreen = true;
                         playSound("sounds/game_over.wav");
-                        stopBackgroundMusic();
                     }
                 }
             }
@@ -276,59 +299,35 @@ int main() {
             if (!blockVisible) resetBlock();
         }
 
+        glClearColor(0, 0, 0, 1);
         glClear(GL_COLOR_BUFFER_BIT);
         drawBackground();
+        renderHUD();
 
-        if (showGameOverScreen) {
-            renderText(windowWidth * 0.3f, windowHeight * 0.5f, "GAME OVER", 5.0f);
-            renderText(windowWidth * 0.25f, windowHeight * 0.4f, "Press ESC to Exit", 2.0f);
-        } else if (showLevelCompleteScreen) {
-            renderText(windowWidth * 0.25f, windowHeight * 0.5f, "LEVEL COMPLETE!", 5.0f);
-            renderText(windowWidth * 0.25f, windowHeight * 0.4f, "Press N for Next Level", 2.0f);
-        } else {
-            glColor3f(0.0f, 0.8f, 0.1f);
+        // Draw paddle
+        glColor3f(0, 1, 0);
+        glBegin(GL_QUADS);
+        glVertex2f(playerX - paddleWidth / 2, -1 + paddleHeight);
+        glVertex2f(playerX + paddleWidth / 2, -1 + paddleHeight);
+        glVertex2f(playerX + paddleWidth / 2, -1);
+        glVertex2f(playerX - paddleWidth / 2, -1);
+        glEnd();
+
+        // Draw block
+        if (blockVisible) {
+            glColor3f(1, 0, 0);
             glBegin(GL_QUADS);
-            glVertex2f(playerX - paddleWidth / 2, -1 + paddleHeight);
-            glVertex2f(playerX + paddleWidth / 2, -1 + paddleHeight);
-            glVertex2f(playerX + paddleWidth / 2, -1);
-            glVertex2f(playerX - paddleWidth / 2, -1);
+            glVertex2f(blockX - 0.05f, blockY);
+            glVertex2f(blockX + 0.05f, blockY);
+            glVertex2f(blockX + 0.05f, blockY + 0.05f);
+            glVertex2f(blockX - 0.05f, blockY + 0.05f);
             glEnd();
-
-            if (blockVisible) {
-                glColor3f(0.9f, 0.1f, 0.1f);
-                glBegin(GL_QUADS);
-                glVertex2f(blockX - 0.05f, blockY);
-                glVertex2f(blockX + 0.05f, blockY);
-                glVertex2f(blockX + 0.05f, blockY - 0.05f);
-                glVertex2f(blockX - 0.05f, blockY - 0.05f);
-                glEnd();
-            }
-
-            renderHUD();
         }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
-
-        if (showLevelCompleteScreen && glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS) {
-            level++;
-            targetScore += 10;
-            score = 0;
-            missedBlocks = 0;
-            showLevelCompleteScreen = false;
-            resetBlock();
-            playBackgroundMusic("sounds/background.wav");
-            while (glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS)
-                glfwPollEvents();
-        }
-
-        if (showGameOverScreen && glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-            break;
-        }
     }
 
-    stopBackgroundMusic();
-    glfwDestroyWindow(window);
     glfwTerminate();
     return 0;
 }
